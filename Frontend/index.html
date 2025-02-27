@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Search</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app">
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold mb-4">Email Search</h1>
+            
+            <!-- Stats -->
+            <div class="mb-4 text-gray-600">
+                Total Emails: {{ stats.totalEmails }}
+            </div>
+
+            <!-- Search Box -->
+            <div class="mb-6">
+                <input 
+                    type="text" 
+                    v-model="searchQuery"
+                    @keyup.enter="search"
+                    placeholder="Search emails..."
+                    class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-4">
+                Loading...
+            </div>
+
+           <!-- Results -->
+<div v-if="results.length" class="space-y-4">
+    <div v-for="(result, index) in results" 
+         :key="index"
+         class="bg-white p-4 rounded-lg shadow">
+      <div class="font-medium">{{ result._source.subject || 'No Subject' }}</div>
+      <div class="text-sm text-gray-600">From: {{ result._source.from || 'Unknown' }}</div>
+      <div class="text-sm text-gray-500 mt-2">
+        {{ result._source.content?.substring(0, 200) + '...' || 'No content' }}
+      </div>
+    </div>
+  </div>
+  
+
+            <!-- No Results -->
+            <div v-if="!loading && searchQuery && !results.length" class="text-center py-4 text-gray-600">
+                No results found
+            </div>
+        </div>
+    </div>
+    <script type="module" src="../Frontend/src/app.js"></script>
+</body>
+</html>
