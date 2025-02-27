@@ -3,14 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Search</title>
+    <title>MamuroEmail</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-gray-100">
     <div id="app">
         <div class="container mx-auto px-4 py-8">
-            <h1 class="text-3xl font-bold mb-4">Email Search</h1>
+            <!-- Header with Logo -->
+            <div class="flex items-center mb-6">
+                <div class="mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold">Email Search</h1>
+            </div>
             
             <!-- Stats -->
             <div class="mb-4 text-gray-600">
@@ -33,26 +42,250 @@
                 Loading...
             </div>
 
-           <!-- Results -->
-<div v-if="results.length" class="space-y-4">
-    <div v-for="(result, index) in results" 
-         :key="index"
-         class="bg-white p-4 rounded-lg shadow">
-      <div class="font-medium">{{ result._source.subject || 'No Subject' }}</div>
-      <div class="text-sm text-gray-600">From: {{ result._source.from || 'Unknown' }}</div>
-      <div class="text-sm text-gray-500 mt-2">
-        {{ result._source.content?.substring(0, 200) + '...' || 'No content' }}
-      </div>
-    </div>
-  </div>
-  
+            <!-- Email Interface with Side-by-Side Layout -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Email Table (Left Side - Yellow Highlighted Style) -->
+                <div class="w-full md:w-1/2 overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-yellow-300">
+                                <th class="border border-gray-400 p-2 text-left">Subject</th>
+                                <th class="border border-gray-400 p-2 text-left">From</th>
+                                <th class="border border-gray-400 p-2 text-left">To</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(result, index) in results" 
+                                :key="index"
+                                @click="selectEmail(result)"
+                                class="bg-yellow-100 hover:bg-yellow-200 cursor-pointer"
+                                :class="{'bg-yellow-300': selectedEmail && selectedEmail._id === result._id}">
+                                <td class="border border-gray-400 p-2">{{ result._source.subject || 'No Subject' }}</td>
+                                <td class="border border-gray-400 p-2">{{ result._source.from || 'Unknown' }}</td>
+                                <td class="border border-gray-400 p-2">{{ result._source.to || 'Unknown' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- No Results -->
+                    <div v-if="!loading && searchQuery && !results.length" class="text-center py-4 text-gray-600">
+                        No results found
+                    </div>
+                </div>
 
-            <!-- No Results -->
-            <div v-if="!loading && searchQuery && !results.length" class="text-center py-4 text-gray-600">
-                No results found
+                <!-- Email Detail (Right Side) -->
+                <div class="w-full md:w-1/2 bg-white rounded-lg shadow" v-if="selectedEmail">
+                    <div class="p-6">
+                        <!--<h2 class="text-xl font-bold">{{ selectedEmailContent.subject || selectedEmail._source.subject || 'No Subject' }}</h2>
+                        
+                        <div class="my-4">
+                            <div class="mb-1"><strong>From:</strong> {{ selectedEmailContent.from || selectedEmail._source.from || 'Unknown' }}</div>
+                            <div class="mb-1" v-if="selectedEmailContent.to || selectedEmail._source.to"><strong>To:</strong> {{ selectedEmailContent.to || selectedEmail._source.to }}</div>
+                            <div class="mb-1" v-if="selectedEmailContent.date || selectedEmail._source.date"><strong>Date:</strong> {{ formatDate(selectedEmailContent.date || selectedEmail._source.date) }}</div>
+                        </div>-->
+                        
+                        <div class="border-t pt-4 whitespace-pre-wrap">
+                            <div v-if="selectedEmailContent.content" v-html="highlightSearchTerm(cleanEmailContent(selectedEmailContent.content))"></div>
+                            <div v-else-if="selectedEmail._source.content" v-html="highlightSearchTerm(cleanEmailContent(selectedEmail._source.content))"></div>
+                            <div v-else class="text-gray-500">
+                                No content available
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else class="w-full md:w-1/2 bg-white rounded-lg shadow flex items-center justify-center p-12 text-gray-500">
+                    Select an email to view its contents
+                </div>
             </div>
         </div>
     </div>
+    
+    <script>
+    const { createApp } = Vue
+
+    createApp({
+        data() {
+            return {
+                searchQuery: '',
+                results: [],
+                loading: false,
+                stats: {
+                    totalEmails: 0
+                },
+                selectedEmail: null,
+                selectedEmailContent: {},
+                emailContents: {} // Cache for email contents
+            }
+        },
+        methods: {
+            async search() {
+                if (!this.searchQuery.trim()) return;
+                
+                this.loading = true;
+                try {
+                    const response = await fetch(`/api/search?q=${encodeURIComponent(this.searchQuery)}`);
+                    const data = await response.json();
+                    
+                    // Handle different API response structures
+                    if (data.hits && data.hits.hits) {
+                        this.results = data.hits.hits;
+                        this.stats.totalEmails = data.hits.total?.value || data.hits.total || 0;
+                    } else if (Array.isArray(data)) {
+                        this.results = data.map((item, index) => ({ _id: item.id || index, _source: item }));
+                        this.stats.totalEmails = data.length;
+                    } else {
+                        this.results = [];
+                        console.error('Unexpected API response format:', data);
+                    }
+                    
+                    this.selectedEmail = null;
+                    this.selectedEmailContent = {};
+                } catch (error) {
+                    console.error('Search error:', error);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            selectEmail(email) {
+                this.selectedEmail = email;
+                
+                // Check if we already have the content cached
+                if (this.emailContents[email._id]) {
+                    this.selectedEmailContent = this.emailContents[email._id];
+                } else {
+                    this.fetchEmailContent(email._id);
+                }
+            },
+            async fetchEmailContent(emailId) {
+                try {
+                    const response = await fetch(`/api/email/${emailId}`);
+                    const data = await response.json();
+                    
+                    // Store content in cache
+                    if (data) {
+                        // Handle different API response structures
+                        if (data._source) {
+                            this.emailContents[emailId] = data._source;
+                            this.selectedEmailContent = data._source;
+                        } else {
+                            this.emailContents[emailId] = data;
+                            this.selectedEmailContent = data;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching email content:', error);
+                    // Fall back to the search result data if available
+                    if (this.selectedEmail && this.selectedEmail._source) {
+                        this.selectedEmailContent = this.selectedEmail._source;
+                    }
+                }
+            },
+            async fetchStats() {
+                try {
+                    const response = await fetch('/api/stats');
+                    const data = await response.json();
+                    this.stats = data;
+                } catch (error) {
+                    console.error('Stats error:', error);
+                }
+            },
+            formatDate(dateString) {
+                if (!dateString) return '';
+                
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleString();
+                } catch {
+                    return dateString;
+                }
+            },
+            // Improved method to clean email content
+            cleanEmailContent(content) {
+                if (!content) return '';
+                
+                // More comprehensive pattern to remove all variations of email headers
+                let cleanedContent = content;
+                
+                // Remove lines with "----- Original Message -----" or similar
+                cleanedContent = cleanedContent.replace(/-----\s*Original Message\s*-----.*$/gm, '');
+                
+                // Remove standard email header lines (From:, To:, Sent:, Subject:, etc.)
+                cleanedContent = cleanedContent.replace(/^(From|To|Sent|Subject|Date|Cc):\s.*$/gm, '');
+                
+                // Remove quoted header parts with email addresses
+                cleanedContent = cleanedContent.replace(/^From:.*?@.*$/gm, '');
+                cleanedContent = cleanedContent.replace(/^To:.*$/gm, '');
+                
+                // Remove date/time header lines that appear in forwarded messages
+                cleanedContent = cleanedContent.replace(/^Sent:.*?(AM|PM)$/gm, '');
+                cleanedContent = cleanedContent.replace(/^Sent:.*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday).*$/gm, '');
+                
+                // Remove lines containing just ">"
+                cleanedContent = cleanedContent.replace(/^>+\s*$/gm, '');
+                
+                // Remove lines starting with ">" followed by any content
+                cleanedContent = cleanedContent.replace(/^>\s.*$/gm, '');
+                
+                // Try to remove entire forwarded message sections
+                const forwardedPatterns = [
+                    /---+ *?Forwarded.*?---+[\s\S]*?From:[\s\S]*?Subject:.*$/gm,
+                    /---+ *?Original Message.*?---+[\s\S]*?From:[\s\S]*?Subject:.*$/gm
+                ];
+                
+                forwardedPatterns.forEach(pattern => {
+                    cleanedContent = cleanedContent.replace(pattern, '');
+                });
+                
+                // Add more specific patterns you see in your emails
+                const customPatterns = [
+                    /.*Original Message.*$/gm,
+                    /From: ".*"/gm,
+                    /To: ".*"/gm,
+                    /^Sent: .*, [A-Za-z]+ \d+, \d+ \d+:\d+ (AM|PM)$/gm
+                ];
+                
+                customPatterns.forEach(pattern => {
+                    cleanedContent = cleanedContent.replace(pattern, '');
+                });
+                
+                // Remove extra line breaks that may be created
+                cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n');
+                
+                return cleanedContent.trim();
+            },
+            // Highlight search terms in content
+            highlightSearchTerm(content) {
+                if (!content || !this.searchQuery.trim()) return content;
+                
+                // Create a regular expression with the search query to match case-insensitive
+                const regex = new RegExp(`(${this.escapeRegex(this.searchQuery)})`, 'gi');
+                
+                // Replace matches with highlighted span
+                return content.replace(regex, '<span class="bg-yellow-200">$1</span>');
+            },
+            // Helper method to escape regex special characters
+            escapeRegex(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            },
+            // Get a preview of the email content for the list view
+            getEmailPreview(content) {
+                if (!content) return 'No content available';
+                
+                // Clean the content first
+                const cleanedContent = this.cleanEmailContent(content);
+                
+                // Return first 50 characters
+                return cleanedContent.length > 50 
+                    ? cleanedContent.substring(0, 50) + '...' 
+                    : cleanedContent;
+            }
+        },
+        mounted() {
+            this.fetchStats();
+        }
+    }).mount('#app')
+    </script>
     <script type="module" src="../Frontend/src/app.js"></script>
 </body>
 </html>
