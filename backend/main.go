@@ -98,7 +98,7 @@ func main() {
 	r.Get("/api/email/{id}", emailHandler) // Nueva ruta para obtener un correo individual
 
 	// Corregir la ruta del directorio estático
-	staticDir := "../frontend/dist"
+	staticDir := "../frontend"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
 		log.Printf("Warning: Directory %s does not exist", staticDir)
 	} else {
