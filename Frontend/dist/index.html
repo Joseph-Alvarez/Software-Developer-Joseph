@@ -7,6 +7,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <script type="module" crossorigin src="/assets/index-b60b0dbb.js"></script>
 </head>
 <body class="bg-gray-100">
     <div id="app">
@@ -45,8 +46,8 @@
             <!-- Email Interface with Side-by-Side Layout -->
             <div class="flex flex-col md:flex-row gap-4">
                 <!-- Email Table (Left Side - Yellow Highlighted Style) -->
-                <div class="overflow-x-auto">
-                    <table class="w-full border border-gray-300">
+                <div class="w-full md:w-1/2 overflow-x-auto">
+                    <table class="w-full border-collapse">
                         <thead>
                             <tr class="bg-yellow-300">
                                 <th class="border border-gray-400 p-2 text-left">Subject</th>
@@ -76,6 +77,13 @@
                 <!-- Email Detail (Right Side) -->
                 <div class="w-full md:w-1/2 bg-white rounded-lg shadow" v-if="selectedEmail">
                     <div class="p-6">
+                        <!--<h2 class="text-xl font-bold">{{ selectedEmailContent.subject || selectedEmail._source.subject || 'No Subject' }}</h2>
+                        
+                        <div class="my-4">
+                            <div class="mb-1"><strong>From:</strong> {{ selectedEmailContent.from || selectedEmail._source.from || 'Unknown' }}</div>
+                            <div class="mb-1" v-if="selectedEmailContent.to || selectedEmail._source.to"><strong>To:</strong> {{ selectedEmailContent.to || selectedEmail._source.to }}</div>
+                            <div class="mb-1" v-if="selectedEmailContent.date || selectedEmail._source.date"><strong>Date:</strong> {{ formatDate(selectedEmailContent.date || selectedEmail._source.date) }}</div>
+                        </div>-->
                         
                         <div class="border-t pt-4 whitespace-pre-wrap">
                             <div v-if="selectedEmailContent.content" v-html="highlightSearchTerm(cleanEmailContent(selectedEmailContent.content))"></div>
@@ -279,6 +287,6 @@
         }
     }).mount('#app')
     </script>
-    <script type="module" src="../Frontend/src/app.js"></script>
+    
 </body>
 </html>
