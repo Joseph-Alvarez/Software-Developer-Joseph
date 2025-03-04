@@ -50,7 +50,7 @@ func init() {
 		Host:     "http://localhost:4080", // Make sure this is set correctly
 		Username: "admin",
 		Password: "Complexpass#123",
-		Index:    "enron_emails",
+		Index:    "enron_emails_Opti",
 	}
 
 	// Override with environment variables if set
