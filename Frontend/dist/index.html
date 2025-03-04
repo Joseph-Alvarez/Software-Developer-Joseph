@@ -22,10 +22,6 @@
                 <h1 class="text-3xl font-bold">Email Search</h1>
             </div>
             
-            <!-- Stats -->
-            <div class="mb-4 text-gray-600">
-                Total Emails: {{ stats.totalEmails }}
-            </div>
 
             <!-- Search Box -->
             <div class="mb-6">
@@ -46,8 +42,8 @@
             <!-- Email Interface with Side-by-Side Layout -->
             <div class="flex flex-col md:flex-row gap-4">
                 <!-- Email Table (Left Side - Yellow Highlighted Style) -->
-                <div class="w-full md:w-1/2 overflow-x-auto">
-                    <table class="w-full border-collapse">
+                <div class="overflow-x-auto">
+                    <table class="w-full border border-gray-300">
                         <thead>
                             <tr class="bg-yellow-300">
                                 <th class="border border-gray-400 p-2 text-left">Subject</th>
@@ -77,13 +73,6 @@
                 <!-- Email Detail (Right Side) -->
                 <div class="w-full md:w-1/2 bg-white rounded-lg shadow" v-if="selectedEmail">
                     <div class="p-6">
-                        <!--<h2 class="text-xl font-bold">{{ selectedEmailContent.subject || selectedEmail._source.subject || 'No Subject' }}</h2>
-                        
-                        <div class="my-4">
-                            <div class="mb-1"><strong>From:</strong> {{ selectedEmailContent.from || selectedEmail._source.from || 'Unknown' }}</div>
-                            <div class="mb-1" v-if="selectedEmailContent.to || selectedEmail._source.to"><strong>To:</strong> {{ selectedEmailContent.to || selectedEmail._source.to }}</div>
-                            <div class="mb-1" v-if="selectedEmailContent.date || selectedEmail._source.date"><strong>Date:</strong> {{ formatDate(selectedEmailContent.date || selectedEmail._source.date) }}</div>
-                        </div>-->
                         
                         <div class="border-t pt-4 whitespace-pre-wrap">
                             <div v-if="selectedEmailContent.content" v-html="highlightSearchTerm(cleanEmailContent(selectedEmailContent.content))"></div>
