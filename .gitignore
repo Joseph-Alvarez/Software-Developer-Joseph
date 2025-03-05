@@ -3,3 +3,12 @@ zincsearch_0.4.10_windows_x86_64
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+
+*.exe
+*.dll
+*.so
+*.dylib
+
+.terraform/providers/**
