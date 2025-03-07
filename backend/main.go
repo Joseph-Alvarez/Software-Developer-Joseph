@@ -183,7 +183,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		query = "*" // Default: Si no hay consulta, devolver todos los documentos
+		query = "*"
 	}
 	log.Printf("Search query: %s", query)
 
@@ -193,13 +193,13 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		size, err = strconv.Atoi(sizeStr)
 		if err != nil {
-			size = 20 // Si la conversión falla, mantener el tamaño por defecto
+			size = 20
 		}
 	}
 
 	// Construir la consulta para ZincSearch
 	searchQuery := map[string]interface{}{
-		"search_type": "querystring", // 🔹 Volver a usar "querystring"
+		"search_type": "querystring",
 		"query": map[string]interface{}{
 			"term": query,
 		},
