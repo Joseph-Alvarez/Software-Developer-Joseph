@@ -139,12 +139,21 @@ func main() {
 		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 	})
 
-	// Iniciar respaldo automático a S3 cada 5 minutos
+	// Iniciar respaldo automático a S3 cada 5 minutos - CON CORRECCIÓN
 	go func() {
 		for {
-			err := uploadToS3("backup.json", "zinc_backup.json")
+			// Primero creamos el archivo de respaldo
+			err := createBackupFile()
 			if err != nil {
-				log.Printf("Error subiendo backup a S3: %v", err)
+				log.Printf("Error creando archivo de backup: %v", err)
+			} else {
+				// Luego lo subimos a S3
+				err = uploadToS3("backup.json", "zinc_backup.json")
+				if err != nil {
+					log.Printf("Error subiendo backup a S3: %v", err)
+				} else {
+					log.Printf("Backup completado exitosamente")
+				}
 			}
 			time.Sleep(5 * time.Minute)
 		}
@@ -154,6 +163,35 @@ func main() {
 	port := 3000
 	fmt.Printf("Mamuro is running at http://localhost:%d\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), r))
+}
+
+// Función para crear el archivo de respaldo
+func createBackupFile() error {
+	// Realiza una consulta amplia para obtener todos los datos o los datos relevantes
+	backupQuery := map[string]interface{}{
+		"search_type": "querystring",
+		"query":       map[string]interface{}{"term": "*"},
+		"size":        1000, // Ajusta según sea necesario
+	}
+
+	result, err := executeZincSearch(backupQuery)
+	if err != nil {
+		return fmt.Errorf("error al obtener datos para backup: %v", err)
+	}
+
+	// Guarda los resultados en archivo backup.json
+	backupData, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error al serializar datos: %v", err)
+	}
+
+	err = ioutil.WriteFile("backup.json", backupData, 0644)
+	if err != nil {
+		return fmt.Errorf("error al escribir archivo de backup: %v", err)
+	}
+
+	log.Printf("Archivo backup.json creado con %d documentos", len(result.Hits.Hits))
+	return nil
 }
 
 // Función para subir archivos a S3
