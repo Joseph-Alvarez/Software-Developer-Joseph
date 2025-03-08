@@ -1,5 +1,6 @@
 const { createApp } = Vue
 
+//Inicializamos la App
 const app = createApp({
     data() {
         return {
@@ -43,6 +44,8 @@ const app = createApp({
             }
         }
     },
+
+    //Ciclo de Vida
     mounted() {
         console.log('App mounted, fetching initial stats...')
         this.getStats()

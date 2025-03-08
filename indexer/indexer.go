@@ -1,3 +1,4 @@
+// indexer.go OPTIMIZACION
 package main
 
 import (
@@ -41,7 +42,7 @@ type BulkOperation struct {
 const (
 	zincURL        = "http://localhost:4080"
 	indexName      = "enron_emails_Opti"
-	batchSize      = 500 // Increased batch size for better efficiency
+	batchSize      = 500
 	username       = "admin"
 	password       = "Complexpass#123"
 	jsonDir        = "C:/Users/Joseph Ordoñez/Desktop/Proyecto_GO/output_json"
@@ -66,7 +67,6 @@ var httpClient = &http.Client{
 
 // Optimized pools for resource reuse
 var (
-	// Pool of bytes.Buffer for reuse
 	bufferPool = sync.Pool{
 		New: func() interface{} {
 			return new(bytes.Buffer)
@@ -81,8 +81,8 @@ var (
 	}
 )
 
+// Crear Indice
 func createIndex() error {
-	// Check if index already exists
 	req, err := http.NewRequest("GET", zincURL+"/api/index/"+indexName, nil)
 	if err != nil {
 		return fmt.Errorf("error al crear request: %v", err)
@@ -94,7 +94,6 @@ func createIndex() error {
 		return fmt.Errorf("error al verificar índice: %v", err)
 	}
 
-	// If index already exists, return
 	if resp.StatusCode == http.StatusOK {
 		resp.Body.Close()
 		fmt.Println("Índice ya existe, saltando creación")
@@ -102,7 +101,7 @@ func createIndex() error {
 	}
 	resp.Body.Close()
 
-	// Create the index
+	// Crear el Indice
 	mapping := map[string]interface{}{
 		"name":         indexName,
 		"storage_type": "disk",
@@ -160,7 +159,6 @@ func indexEmailBatch(batch []Email, retryCount int) error {
 	defer bufferPool.Put(buffer)
 
 	for _, email := range batch {
-		// Truncate large content
 		if len(email.Content) > contentMaxLen {
 			email.Content = email.Content[:contentMaxLen] + "... (content truncated)"
 		}
@@ -207,25 +205,22 @@ func indexEmailBatch(batch []Email, retryCount int) error {
 	return nil
 }
 
-// Worker function for parallel indexing
+// funcion indexacion paralela
 func indexWorker(id int, jobs <-chan []Email, results chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for batch := range jobs {
 		err := indexEmailBatch(batch, 0)
 		results <- err
 
-		// Return emails to pool
 		for i := range batch {
-			batch[i] = Email{} // Clear fields
+			batch[i] = Email{}
 		}
 	}
 }
 
-// Optimized dynamic worker count
+// Optimizador Dinamico de Nucleos
 func optimizeWorkerCount() int {
 	cpus := runtime.NumCPU()
-	// Use more workers for I/O bound operations
-	// but avoid overloading the system
 	if cpus <= 4 {
 		return cpus
 	} else if cpus <= 8 {
@@ -235,24 +230,22 @@ func optimizeWorkerCount() int {
 	}
 }
 
-// Process emails in batches
+// Procesar correos en Lotes
 func processEmailBatches(emailsChan <-chan Email) error {
 	batch := make([]Email, 0, batchSize)
 	totalProcessed := 0
 	maxWorkers := optimizeWorkerCount()
 
-	// Create worker pool
 	jobs := make(chan []Email, maxWorkers*2)
 	results := make(chan error, maxWorkers*2)
 	var wg sync.WaitGroup
 
-	// Start workers
 	for w := 1; w <= maxWorkers; w++ {
 		wg.Add(1)
 		go indexWorker(w, jobs, results, &wg)
 	}
 
-	// Process results in a separate goroutine
+	//Resultados del proceso
 	errChan := make(chan error, 1)
 	var resultsWg sync.WaitGroup
 	resultsWg.Add(1)
@@ -274,15 +267,13 @@ func processEmailBatches(emailsChan <-chan Email) error {
 		errChan <- nil
 	}()
 
-	// Process emails and create batches
+	//Procesar correos electrónicos y crear lotes
 	for email := range emailsChan {
 		batch = append(batch, email)
 
 		if len(batch) >= batchSize {
-			// Send full batch to worker
-			jobs <- append([]Email{}, batch...) // Make a copy to avoid data races
+			jobs <- append([]Email{}, batch...)
 
-			// Reset batch
 			batch = make([]Email, 0, batchSize)
 
 			totalProcessed += batchSize
@@ -292,21 +283,19 @@ func processEmailBatches(emailsChan <-chan Email) error {
 		}
 	}
 
-	// Process any remaining emails
+	//Procesar los correos electrónicos restantes
 	if len(batch) > 0 {
 		jobs <- append([]Email{}, batch...)
 		totalProcessed += len(batch)
 	}
 
-	// Close channels and wait for workers to finish
 	close(jobs)
 	wg.Wait()
 	close(results)
 
-	// Wait for results processing
 	resultsWg.Wait()
 
-	// Check for errors
+	//Comprobar si hay errores
 	select {
 	case err := <-errChan:
 		if err != nil {
@@ -319,7 +308,7 @@ func processEmailBatches(emailsChan <-chan Email) error {
 	return nil
 }
 
-// Optimized JSON file processing with streaming
+// Optimizado de archivos JSON con streaming
 func readJSONFile(path string) (Email, error) {
 	var email Email
 
@@ -329,7 +318,6 @@ func readJSONFile(path string) (Email, error) {
 	}
 	defer file.Close()
 
-	// Use larger buffer for better performance
 	reader := bufio.NewReaderSize(file, fileBufferSize)
 	decoder := json.NewDecoder(reader)
 
@@ -337,7 +325,7 @@ func readJSONFile(path string) (Email, error) {
 		return email, err
 	}
 
-	// Parse and normalize date if needed
+	//Normalizar la fecha si es Necesario
 	if email.Date != "" {
 		parsedDate, err := time.Parse(time.RFC1123Z, email.Date)
 		if err == nil {
@@ -348,18 +336,18 @@ func readJSONFile(path string) (Email, error) {
 	return email, nil
 }
 
-// Process files in chunks to reduce memory usage
+// Procesar archivos en fragmentos
 func processFiles(files []string) error {
 	numWorkers := optimizeWorkerCount()
 	fmt.Printf("Procesando archivos con %d workers\n", numWorkers)
 
-	// Channel for processed emails
+	//correos electrónicos procesados
 	emailsChan := make(chan Email, batchSize)
 
-	// Error channel
+	// Error canal
 	errorsChan := make(chan error, numWorkers)
 
-	// Start file processing goroutine
+	//Iniciar Proceso
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -367,7 +355,7 @@ func processFiles(files []string) error {
 		defer wg.Done()
 		defer close(emailsChan)
 
-		// Process files in chunks
+		//Procesar Archivos en Fragmentos
 		chunkSize := 1000
 		for i := 0; i < len(files); i += chunkSize {
 			end := i + chunkSize
@@ -379,7 +367,6 @@ func processFiles(files []string) error {
 			filesChan := make(chan string, len(chunk))
 			var chunkWg sync.WaitGroup
 
-			// Start workers for this chunk
 			for w := 0; w < numWorkers; w++ {
 				chunkWg.Add(1)
 				go func() {
