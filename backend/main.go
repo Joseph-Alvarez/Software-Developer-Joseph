@@ -38,7 +38,6 @@ type SearchResponse struct {
 	} `json:"hits"`
 }
 
-// Configuración de ZincSearch
 type ZincSearchConfig struct {
 	Host     string
 	Username string
@@ -56,7 +55,7 @@ var (
 func init() {
 	// Configuración de ZincSearch
 	config = ZincSearchConfig{
-		Host:     "http://localhost:4080", // Cambia esto si usas otro puerto
+		Host:     "http://localhost:4080",
 		Username: "admin",
 		Password: "Complexpass#123",
 		Index:    "enron_emails_Opti",
@@ -139,7 +138,7 @@ func main() {
 		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 	})
 
-	// Iniciar respaldo automático a S3 cada 5 minutos - CON CORRECCIÓN
+	// Iniciar respaldo automático a S3 cada 5 minutos
 	go func() {
 		for {
 			// Primero creamos el archivo de respaldo
@@ -226,7 +225,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Search query: %s", query)
 
 	sizeStr := r.URL.Query().Get("size")
-	size := 20 // Tamaño por defecto
+	size := 20
 	if sizeStr != "" {
 		var err error
 		size, err = strconv.Atoi(sizeStr)
